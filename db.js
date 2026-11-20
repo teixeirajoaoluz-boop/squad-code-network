@@ -1,6 +1,6 @@
 'use strict';
 /*
- * SQUAD/CODE persistence: one SQLite database (better-sqlite3) in data/squad.db.
+ * SQUAD/CODE persistence: one SQLite database (node:sqlite, built into Node >= 22.5) in data/squad.db.
  *
  * Workspace: one table per entity (agents, squads, projects, adrs, sprints, features, feature_outputs, logs, handoffs, convention
  * templates/subsets) under a single root row. Each row keeps the entity's own JSON (`data`) with its child arrays left as [] in
@@ -15,12 +15,48 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 
-let Database = null, driverError = '';
-try { Database = require('better-sqlite3'); }
+let DatabaseSync = null, driverError = '';
+try { ({ DatabaseSync } = require('node:sqlite')); }
 catch (e) {
-  driverError = e.code === 'MODULE_NOT_FOUND'
-    ? 'Dependência ausente (better-sqlite3): rode "npm install" na pasta do SQUAD/CODE.'
-    : `Não foi possível carregar o better-sqlite3 (${e.message}). Apague a pasta node_modules e rode "npm install" de novo.`;
+  driverError = `Este Node não tem o módulo nativo node:sqlite (${e.message}). Instale o Node 22.5 ou mais recente.`;
+}
+
+/* Thin shim over node:sqlite's DatabaseSync so the rest of this file can keep the better-sqlite3-shaped calls
+   (`.pragma`, `.transaction`, prepared statements with `.pluck()`) node:sqlite does not have. */
+class Stmt {
+  constructor(raw) { this.raw = raw; this.plucking = false; }
+  pluck() { this.plucking = true; this.raw.setReturnArrays(true); return this; }
+  run(...args) { return this.raw.run(...args); }
+  get(...args) { const r = this.raw.get(...args); return this.plucking ? (r ? r[0] : undefined) : r; }
+  all(...args) { const rs = this.raw.all(...args); return this.plucking ? rs.map(r => r[0]) : rs; }
+}
+function pragma(raw, stmt, opts) {
+  const m = /^(\w+)\s*(?:=\s*(.+))?$/.exec(stmt);
+  if (!m) throw new Error(`pragma inválida: ${stmt}`);
+  const [, name, value] = m;
+  if (value !== undefined) { raw.exec(`PRAGMA ${name} = ${value}`); return; }
+  const row = raw.prepare(`PRAGMA ${name}`).get();
+  return opts && opts.simple ? (row ? Object.values(row)[0] : undefined) : (row ? [row] : []);
+}
+function wrapTransaction(raw, fn) {
+  function call(mode, args) {
+    raw.exec(mode ? `BEGIN ${mode}` : 'BEGIN');
+    try { const result = fn(...args); raw.exec('COMMIT'); return result; }
+    catch (e) { try { raw.exec('ROLLBACK'); } catch {} throw e; }
+  }
+  const wrapper = (...args) => call('', args);
+  wrapper.immediate = (...args) => call('IMMEDIATE', args);
+  wrapper.exclusive = (...args) => call('EXCLUSIVE', args);
+  wrapper.deferred = wrapper;
+  return wrapper;
+}
+class Database {
+  constructor(file) { this.raw = new DatabaseSync(file); }
+  pragma(stmt, opts) { return pragma(this.raw, stmt, opts); }
+  exec(sql) { return this.raw.exec(sql); }
+  prepare(sql) { return new Stmt(this.raw.prepare(sql)); }
+  transaction(fn) { return wrapTransaction(this.raw, fn); }
+  close() { this.raw.close(); }
 }
 
 const KEEP_SNAPSHOTS = 30;
@@ -143,7 +179,7 @@ function moveSync(from, to) {
 }
 
 function openStore(dataDir) {
-  if (!Database) throw new Error(driverError);
+  if (!DatabaseSync) throw new Error(driverError);
   fs.mkdirSync(dataDir, { recursive: true });
   const file = path.join(dataDir, 'squad.db');
   const db = new Database(file);
@@ -405,5 +441,5 @@ function openStore(dataDir) {
   };
 }
 
-// driverError: why better-sqlite3 did not load ('' when it did); the bridge checks it at start, before any database exists.
+// driverError: why node:sqlite did not load ('' when it did); the bridge checks it at start, before any database exists.
 module.exports = { openStore, hash, checkWorkspace, runMeta, driverError };

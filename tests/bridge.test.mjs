@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4400 + Math.floor(Math.random() * 300);
@@ -387,12 +387,12 @@ test('workspace rows round-trip byte for byte and diffs touch only what changed'
   assert.equal(JSON.stringify(await get()), JSON.stringify(moved));
 
   // Generated columns make the entities queryable with plain SQL.
-  const db = new Database(path.join(dataRoot, 'squad.db'), { readonly: true });
+  const db = new DatabaseSync(path.join(dataRoot, 'squad.db'), { readOnly: true });
   try {
     assert.deepEqual(db.prepare('SELECT name, role FROM agents ORDER BY pos').all().map(r => `${r.name}/${r.role}`), ['VANGUARD II/commander', 'DUP/qa', 'SEM ID/po']);
-    assert.equal(db.prepare("SELECT title FROM features WHERE status = 'done'").pluck().get(), 'Login');
-    assert.equal(db.prepare('SELECT count(*) FROM logs').pluck().get(), 500);
-    assert.equal(db.prepare('SELECT count(*) FROM feature_outputs').pluck().get(), 2);
+    assert.equal(db.prepare("SELECT title FROM features WHERE status = 'done'").get().title, 'Login');
+    assert.equal(db.prepare('SELECT count(*) AS c FROM logs').get().c, 500);
+    assert.equal(db.prepare('SELECT count(*) AS c FROM feature_outputs').get().c, 2);
   } finally { db.close(); }
 });
 
@@ -486,8 +486,8 @@ test('operation room messages are saved incrementally, trimmed and handed to the
   await room({ seq: 821, upserts: [{ ...msgs[819], text: 'editado' }, { id: 'rm821', at: new Date().toISOString(), kind: 'baton', from: 'a1', to: null, text: 'x'.repeat(20000) }], removes: ['rm819'] });
   assert.equal((await api('/api/rooms/..%2Fx', { method: 'POST', body: '{}' })).status, 400);
 
-  const db = new Database(path.join(dataRoot, 'squad.db'), { readonly: true });
-  try { assert.equal(db.prepare("SELECT count(*) FROM room_messages WHERE project_id = 'p1'").pluck().get(), 800); } finally { db.close(); }
+  const db = new DatabaseSync(path.join(dataRoot, 'squad.db'), { readOnly: true });
+  try { assert.equal(db.prepare("SELECT count(*) AS c FROM room_messages WHERE project_id = 'p1'").get().c, 800); } finally { db.close(); }
   const r = pageTag(await page(), 'squad-memory').rooms.p1;
   assert.equal(r.seq, 821);
   assert.equal(r.messages.length, 200);

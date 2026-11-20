@@ -293,7 +293,7 @@ Os atalhos de edição não interrompem a digitação em campos de texto. Config
 
 ## 💾 Dados locais e backup
 
-Com o bridge, os dados ficam num banco SQLite local, `data/squad.db`, ao lado do `server.js` (outra pasta com `SQUAD_DATA_DIR`; o bridge usa o `better-sqlite3`, instalado com `npm install`). O banco guarda o workspace (uma tabela por entidade: agentes, squads, operações, ADRs, sprints, features, entregas, logs e handoffs), as mensagens da sala de cada operação (as 800 mais recentes), as conversas (co-escrita da feature, chat com agente e Agent Teams) e o histórico de execuções do `claude -p`, que o Console mostra em **Histórico** mesmo depois de reiniciar o bridge.
+Com o bridge, os dados ficam num banco SQLite local, `data/squad.db`, ao lado do `server.js` (outra pasta com `SQUAD_DATA_DIR`; o bridge usa o `node:sqlite`, módulo nativo do Node, sem instalar nada). O banco guarda o workspace (uma tabela por entidade: agentes, squads, operações, ADRs, sprints, features, entregas, logs e handoffs), as mensagens da sala de cada operação (as 800 mais recentes), as conversas (co-escrita da feature, chat com agente e Agent Teams) e o histórico de execuções do `claude -p`, que o Console mostra em **Histórico** mesmo depois de reiniciar o bridge.
 
 **Primeira execução.** O bridge não cria o banco sozinho. Sem `data/squad.db`, a página abre a janela **Nenhum banco encontrado**, que não fecha até a pessoa escolher como começar: **Começar do zero** (agentes e squad padrão e uma primeira operação vazia com o nome digitado, aberta em seguida para o briefing), **Carregar exemplo** (Atlas Commerce), **Importar backup** (`.json`) ou **Recuperar a cópia deste navegador** (quando houver; se outra opção for escolhida, essa cópia vira uma versão salva). A janela também mostra o caminho do banco e se o Claude Code foi encontrado. Nada é gravado antes da escolha.
 
@@ -311,8 +311,8 @@ Use **Exportar workspace** nas configurações para guardar um backup JSON e **I
 squad-code-network/
   index.html                 # Interface completa, pronta para abrir
   server.js                  # Bridge local: serve o HTML e executa claude -p
-  db.js                      # Banco SQLite (better-sqlite3): workspace, versões, sala, conversas e execuções
-  package.json               # npm start / npm test; dependência better-sqlite3
+  db.js                      # Banco SQLite (node:sqlite): workspace, versões, sala, conversas e execuções
+  package.json               # npm start / npm test; sem dependências externas
   build.py                   # Recompila o HTML sem dependências
   src/
     shell.html               # Estrutura base e ícones

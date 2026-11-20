@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SQUAD/CODE is a single-page web app for organizing a squad of software-development
 agents (commander, ADR/PRD "reconhecedores", operators) that execute features through headless Claude
-Code (`claude -p`). The bridge keeps the app's data in a local SQLite database (`better-sqlite3`, the only npm dependency). UI text is Portuguese (pt-BR); code identifiers are English. Git repo; `origin` is github.com/felipeAguiarCode/squad-code-network.
+Code (`claude -p`). The bridge keeps the app's data in a local SQLite database via Node's built-in `node:sqlite` (no npm dependencies). UI text is Portuguese (pt-BR); code identifiers are English. Git repo; `origin` is github.com/felipeAguiarCode/squad-code-network.
 
 ## Commands
 
 ```sh
-npm install                 # better-sqlite3 (prebuilt binary; Node >= 22)
+npm install                 # no dependencies; SQLite comes from node:sqlite (Node >= 22.5)
 npm run dev                 # build index.html from src/, start the bridge, rebuild on src/ changes, restart on server.js / db.js changes
 npm start                   # node server.js → http://127.0.0.1:4317 (--port N or SQUAD_PORT; SQUAD_CLAUDE_BIN for another claude; SQUAD_PROJECTS_DIR for another projects root; SQUAD_DATA_DIR for another database folder)
 python build.py [--copy]    # full build: regenerates src/avatars.js (needs Pillow), writes index.html (--copy: also ../squad-code-network.html)
@@ -67,7 +67,7 @@ Windows) and the agents' git commands never reach the enclosing repository (this
 (`buildStepPrompt`) and `CALLED_AGENT_SYSTEM` tell agents to keep every file inside the folder. The settings.json project/local scopes
 take `project=` as well.
 Data: `db.js` (`openStore(DATA_DIR)`, `SQUAD_DATA_DIR`, default `./data`, git-ignored) opens `squad.db` (WAL, foreign keys, migrations
-by `user_version`); without better-sqlite3 the bridge exits at start telling to run `npm install` (`driverError`). **The database is
+by `user_version`); without a Node new enough for `node:sqlite` the bridge exits at start saying so (`driverError`). **The database is
 created only by the person:** at start (inside the `listen` callback, so a second bridge on a busy port exits with a clear message
 before touching it) `openDb()` runs only if `squad.db` or a legacy `workspace.json` exists. Otherwise `store` stays null and nothing is
 written: `setupNeeded()` (no store, or no workspace row) sets `setup:true` in `#squad-disk` and `dbReady:false` in `/api/health`;

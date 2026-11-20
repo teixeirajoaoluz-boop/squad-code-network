@@ -74,7 +74,7 @@ Ubuntu 20.04+, Debian 10+ ou Alpine 3.19+; 4 GB de RAM; conexão com a internet.
 | **Pillow** | Converter `assets/*.png` na galeria de avatares (`pip install pillow`) | [pypi.org/project/pillow](https://pypi.org/project/pillow/) |
 | **Playwright para Python** + Chromium | Testes de interface (`tests/ui_test.py`) | [playwright.dev/python](https://playwright.dev/python/docs/intro) |
 
-O projeto tem **uma única dependência npm**, o `better-sqlite3` (banco SQLite local), instalada com `npm install`.
+O projeto **não tem dependências npm**: o banco SQLite local usa o módulo nativo `node:sqlite` do próprio Node (>= 22.5).
 
 ---
 
@@ -90,8 +90,8 @@ cd squad-code-network
 ### 2. Confira o Node.js e instale as dependências
 
 ```sh
-node --version   # precisa ser v22 ou superior
-npm install      # instala o better-sqlite3 (binário pronto para Windows, macOS e Linux)
+node --version   # precisa ser v22.5 ou superior (módulo node:sqlite)
+npm install      # sem dependências; só prepara o projeto
 ```
 
 ### 3. Instale o Claude Code
@@ -352,7 +352,7 @@ squad-code-network/
 ├── index.html          # app completo, gerado pelo build (não editar)
 ├── server.js           # bridge local: serve o app e executa claude -p
 ├── db.js               # banco SQLite (workspace, versões, sala, conversas, execuções)
-├── package.json        # scripts npm e a dependência better-sqlite3
+├── package.json        # scripts npm (sem dependências externas)
 ├── build.py            # build completo (avatares + index.html)
 ├── src/                # código-fonte da interface
 │   ├── shell.html      # estrutura base
@@ -388,8 +388,7 @@ squad-code-network/
 | Erro de autenticação nas etapas | Rode `claude` no terminal e faça login de novo. Confira se o plano inclui o Claude Code. |
 | Mapa 3D não aparece ou fica lento | O navegador está sem WebGL. Ative a aceleração por hardware; sem WebGL o app usa a projeção 2D. |
 | Agentes, squads ou operações sumiram | Abra pelo bridge (`npm start`): os dados ficam em `data/squad.db`. Se o rodapé mostrar `SALVO SÓ NO NAVEGADOR`, recarregue a página com o bridge ativo. Versões anteriores ficam em Configurações > Workspace > **Versões salvas**. Pelo `index.html` (demo) os dados ficam só no navegador. |
-| `npm warn allow-scripts better-sqlite3 ... (install: node-gyp rebuild)` no `npm install` | Pode ignorar: o `better-sqlite3` já traz binários prontos para Windows, macOS e Linux, e o script de compilação bloqueado não é necessário. Não precisa aprovar. |
-| `Dependência ausente (better-sqlite3)` ao iniciar | Rode `npm install` na pasta do projeto. Se o erro for ao carregar o módulo (por exemplo, depois de trocar a versão do Node ou copiar a pasta de outra máquina), apague `node_modules` e rode `npm install` de novo. |
+| `Este Node não tem o módulo nativo node:sqlite` ao iniciar | Atualize para o Node 22.5 ou mais recente (`node --version`); o banco usa esse módulo embutido, sem instalar nada. |
 
 ---
 

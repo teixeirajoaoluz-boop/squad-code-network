@@ -2,7 +2,7 @@
 'use strict';
 /*
  * SQUAD/CODE bridge: serves index.html, spawns headless Claude Code (`claude -p`) and keeps the app's data in SQLite (db.js).
- * Only dependency: better-sqlite3 (`npm install`). Binds to 127.0.0.1 only and requires a per-start token on every API call.
+ * No npm dependencies: SQLite comes from Node's built-in node:sqlite (>= 22.5). Binds to 127.0.0.1 only and requires a per-start token on every API call.
  *
  *   node server.js [--port 4317]
  *
@@ -44,8 +44,8 @@ const LEGACY_FILE = path.join(DATA_DIR, 'workspace.json');
 const MAX_WORKSPACE = 64 * 1024 * 1024;
 const dbModule = require('./db.js');
 if (dbModule.driverError) { console.error(`SQUAD/CODE: ${dbModule.driverError}`); process.exit(1); }
-const nodeMajor = Number(process.versions.node.split('.')[0]);
-if (nodeMajor < 22) console.warn(`SQUAD/CODE pede o Node 22 ou mais novo (este é o ${process.version}). Atualize se algo falhar.`);
+const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
+if (nodeMajor < 22 || (nodeMajor === 22 && nodeMinor < 5)) console.warn(`SQUAD/CODE pede o Node 22.5 ou mais novo (este é o ${process.version}). Atualize se algo falhar.`);
 let store = null;
 function openDb() {
   store = dbModule.openStore(DATA_DIR);
